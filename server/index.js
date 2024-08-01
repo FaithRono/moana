@@ -1,7 +1,6 @@
 import express from 'express';
 import * as dotenv from 'dotenv';
 import cors from 'cors';
-
 import connectDB from './mongodb/connect.js';
 import postRoutes from './routes/postRoutes.js';
 import dalleRoutes from './routes/dalleRoutes.js';
@@ -23,7 +22,7 @@ app.get('/', async (req, res) => {
 
 const startServer = async () => {
   try {
-    connectDB(process.env.MONGODB_URL);
+    await connectDB(process.env.MONGODB_URL);  // Ensure the function is awaited
     app.listen(3000, () => console.log('Server started on port 3000'));
   } catch (error) {
     console.log(error);

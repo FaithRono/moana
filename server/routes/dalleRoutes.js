@@ -6,9 +6,7 @@ dotenv.config();
 
 const router = express.Router();
 
-const openai = new OpenAI({
-  apiKey: process.env.VITE_OPENAI_API_KEY,
-});
+
 
 // Basic test endpoint
 router.route('/').get((req, res) => {
@@ -21,7 +19,7 @@ router.route('/').post(async (req, res) => {
 
     const aiResponse = await openai.createImages({
       prompt,
-      n: 1,
+      n: 2,
       size: '1024x1024',
       response_format: 'b64_json',
     });

@@ -118,17 +118,12 @@ const Home = () => {
   const [showAnswers, setShowAnswers] = useState(false);
   const [activeQuestion, setActiveQuestion] = useState(null);
 
-  const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
   const fetchPosts = async () => {
     setLoading(true);
 
     try {
-      const response = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        },
+      const response = await fetch('/api/posts', {
+        method: 'GET',
       });
 
       if (response.ok) {

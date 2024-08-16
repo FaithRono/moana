@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { preview } from '../assets';
 import { getRandomPrompt } from '../utils';
 import { FormField, Loader } from '../components';
 import useSpeechRecognition from '../hooks/useSpeechRecognition';
-import { FaTrashAlt } from 'react-icons/fa'; // Import trash icon
+import { FaTrashAlt, FaDownload, FaSave } from 'react-icons/fa';
 
 const CreatePost = () => {
   const navigate = useNavigate();
@@ -13,11 +13,12 @@ const CreatePost = () => {
     prompt: '',
     photos: [],
   });
-
   const [generatingImg, setGeneratingImg] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isPromptEditing, setIsPromptEditing] = useState(false);
   const [tempPrompt, setTempPrompt] = useState('');
+  const [recentCreations, setRecentCreations] = useState([]);
+  const [showRecentCreations, setShowRecentCreations] = useState(false);
 
   const { transcript, isListening, startListening, stopListening } = useSpeechRecognition();
 
@@ -27,6 +28,21 @@ const CreatePost = () => {
       setForm({ ...form, prompt: transcript });
     }
   }, [transcript]);
+
+  useEffect(() => {
+    // Fetch images from the backend
+    const fetchImages = async () => {
+      try {
+        const response = await fetch('http://localhost:3000/api/images');
+        const data = await response.json();
+        setRecentCreations(data);
+      } catch (err) {
+        console.error('Error fetching images:', err);
+      }
+    };
+
+    fetchImages();
+  }, []);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -45,12 +61,12 @@ const CreatePost = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.VITE_OPENAI_API_KEY}`,
+            'Authorization': `Bearer ${''}`,
           },
           body: JSON.stringify({
             prompt: form.prompt,
             n: 2, // Generate 2 images
-            size: '1024x1024'
+            size: '1024x1024',
           }),
         });
         const data = await response.json();
@@ -60,7 +76,22 @@ const CreatePost = () => {
             prompt: form.prompt,
           }));
           setForm({ ...form, photos: newPhotos });
-          setRecentCreations(prev => [...prev, ...newPhotos]);
+          setRecentCreations((prev) => [...prev, ...newPhotos]);
+
+          // Save images to MongoDB
+          newPhotos.forEach(async (photo) => {
+            try {
+              await fetch('http://localhost:3000/image', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(photo),
+              });
+            } catch (err) {
+              console.error('Error saving image:', err);
+            }
+          });
         } else {
           alert('Invalid photo data received from the API.');
         }
@@ -81,16 +112,18 @@ const CreatePost = () => {
     if (form.prompt && form.photos.length) {
       setLoading(true);
       try {
-        const response = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.VITE_OPENAI_API_KEY}`,
-          },
-          body: JSON.stringify({ ...form }),
-        });
+        await Promise.all(
+          form.photos.map(async (photo) => {
+            await fetch('http://localhost:3000/api/image', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(photo),
+            });
+          })
+        );
 
-        await response.json();
         alert('Success');
         navigate('/');
       } catch (err) {
@@ -121,15 +154,47 @@ const CreatePost = () => {
     }
   };
 
-  const [recentCreations, setRecentCreations] = useState([]);
-  const [showRecentCreations, setShowRecentCreations] = useState(false);
-
   const handleShowRecentCreations = () => {
     setShowRecentCreations(!showRecentCreations);
   };
 
-  const handleDeletePhoto = (url) => {
-    setRecentCreations(recentCreations.filter(photo => photo.url !== url));
+  const handleSavePhoto = (url) => {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = url.substring(url.lastIndexOf('/') + 1);
+    a.click();
+    alert('Photo saved to your local machine!');
+  };
+
+  const handleDownloadPhoto = (url) => {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = url.substring(url.lastIndexOf('/') + 1);
+    a.click();
+  };
+
+  const handleDeletePhoto = async (url) => {
+    const updatedPhotos = recentCreations.filter((photo) => photo.url !== url);
+    setRecentCreations(updatedPhotos);
+
+    // Update MongoDB
+    try {
+      await fetch('http://localhost:3000/api/images', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      });
+      alert('Photo deleted!');
+    } catch (err) {
+      console.error('Error deleting photo:', err);
+    }
+  };
+
+  const handleShareWithCommunity = () => {
+    localStorage.setItem('savedPhotos', JSON.stringify(recentCreations));
+    navigate('/'); // Redirect to Home
   };
 
   return (
@@ -149,147 +214,110 @@ const CreatePost = () => {
             labelName="Your Name"
             type="text"
             name="name"
-            placeholder="Ex., Park Jimin"
+            placeholder="Enter your name"
             value={form.name}
             handleChange={handleChange}
           />
         </div>
 
         <div className="mb-6">
-          {isPromptEditing ? (
-            <input
+          <div className="flex items-center">
+            <FormField
+              labelName="Prompt"
               type="text"
               name="prompt"
-              value={tempPrompt}
-              onChange={(e) => setTempPrompt(e.target.value)}
+              placeholder="Enter a prompt to generate image"
+              value={isPromptEditing ? tempPrompt : form.prompt}
+              handleChange={(e) => setTempPrompt(e.target.value)}
+              onFocus={handlePromptClick}
               onBlur={handlePromptBlur}
-              className="w-full p-2 border rounded"
-              placeholder="Describe what you want to see..."
             />
-          ) : (
             <button
               type="button"
-              onClick={handlePromptClick}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-pink-500 hover:to-purple-500 text-white font-bold py-2 px-4 rounded shadow-lg transition-all duration-300 transform hover:scale-105 w-full text-left"
+              onClick={handleSurpriseMe}
+              className="ml-3 bg-yellow-500 text-white font-bold py-2 px-4 rounded hover:bg-yellow-600 transform transition-transform duration-500 ease-in-out hover:scale-110"
             >
-              {form.prompt || 'Click here to enter a prompt'}
+              Surprise Me!
             </button>
-          )}
+          </div>
         </div>
 
-        <div className="text-center mb-6">
-          <button
-            type="button"
-            onClick={handleSurpriseMe}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-pink-500 hover:to-purple-500 text-white font-bold py-2 px-4 rounded shadow-lg transition-all duration-300 transform hover:scale-105 mr-4"
-          >
-            Surprise Me!
-          </button>
-          <button
-            type="button"
-            onClick={handlePromptClick}
-            className="bg-gradient-to-r from-blue-500 to-teal-500 hover:from-teal-500 hover:to-blue-500 text-white font-bold py-2 px-4 rounded shadow-lg transition-all duration-300 transform hover:scale-105 mr-4"
-          >
-            Enter Prompt
-          </button>
-          <button
-            type="button"
-            onClick={handleVoiceTyping}
-            className={`bg-gradient-to-r ${isListening ? 'from-red-500 to-red-700' : 'from-green-400 to-blue-500'} hover:from-blue-500 hover:to-green-400 text-white font-bold py-2 px-4 rounded shadow-lg transition-all duration-300 transform hover:scale-105`}
-          >
-            {isListening ? 'Listening...' : 'Voice Typing'}
-          </button>
-        </div>
-
-        <div className="relative mb-6 w-64 h-64 mx-auto bg-gray-100 border border-gray-300 rounded-lg flex justify-center items-center">
-          {form.photos.length > 0 ? (
-            <div className="w-full h-full flex flex-wrap">
-              {form.photos.map((photo, index) => (
-                <img
-                  key={index}
-                  src={photo.url}
-                  alt={`${form.prompt} ${index + 1}`}
-                  className="w-1/2 h-full object-contain rounded-lg"
-                />
-              ))}
-            </div>
-          ) : (
-            <img
-              src={preview}
-              alt="preview"
-              className="w-9/12 h-9/12 object-contain opacity-40"
-            />
-          )}
-
-          {generatingImg && (
-            <div className="absolute inset-0 z-10 flex justify-center items-center bg-black bg-opacity-50 rounded-lg">
-              <Loader />
-            </div>
-          )}
-        </div>
-
-        <div className="text-center mb-6">
+        <div className="flex justify-between items-center mb-6">
           <button
             type="button"
             onClick={generateImage}
-            className="bg-gradient-to-r from-green-400 to-blue-500 hover:from-blue-500 hover:to-green-400 text-white font-bold py-2 px-4 rounded shadow-lg transition-all duration-300 transform hover:scale-105"
+            className="bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-600 transform transition-transform duration-500 ease-in-out hover:scale-110"
+            disabled={generatingImg}
           >
             {generatingImg ? 'Generating...' : 'Generate Image'}
           </button>
-        </div>
 
-        <div className="text-right">
-          <p className="text-gray-600 mb-2">Inspire the community by sharing your creation</p>
-          <button
-            type="submit"
-            className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-2 px-4 rounded shadow-lg transition-all duration-300 transform hover:scale-105"
-          >
-            {loading ? 'Sharing...' : 'Share with the Community'}
-          </button>
-        </div>
-
-        {/* Recent Creations Button */}
-        <div className="text-left mb-6">
           <button
             type="button"
-            onClick={handleShowRecentCreations}
-            className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-orange-500 hover:to-yellow-400 text-white font-bold py-2 px-4 rounded shadow-lg transition-all duration-300 transform hover:scale-105"
+            onClick={handleVoiceTyping}
+            className={`bg-green-500 text-white font-bold py-2 px-4 rounded hover:bg-green-600 transform transition-transform duration-500 ease-in-out hover:scale-110 ${
+              isListening ? 'animate-pulse' : ''
+            }`}
           >
-            {showRecentCreations ? 'Hide Recent Creations' : 'Recent Creations'}
+            {isListening ? 'Stop Voice Typing' : 'Voice Typing'}
           </button>
         </div>
 
-        {/* Recent Creations Section */}
-        {showRecentCreations && (
-          <div className="recent-creations mt-6">
-            <h2 className="text-2xl font-bold text-white mb-4">Recent Creations</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {recentCreations.map((creation, index) => (
-                <div key={index} className="relative w-full h-64 bg-gray-100 border border-gray-300 rounded-lg overflow-hidden group">
-                  <img
-                    src={creation.url}
-                    alt={`Creation ${index + 1}`}
-                    className="w-full h-full object-cover group-hover:opacity-70 transition-opacity duration-300"
-                  />
-                  <div className="absolute inset-0 flex justify-center items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black bg-opacity-50">
-                    <p className="text-white">{creation.prompt}</p>
-                    <button
-                      onClick={() => handleDeletePhoto(creation.url)}
-                      className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition-colors duration-300"
-                    >
-                      <FaTrashAlt />
-                    </button>
-                  </div>
-                </div>
-              ))}
+        <div className="relative">
+          {generatingImg ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-lg">
+              <Loader />
             </div>
-          </div>
-        )}
+          ) : form.photos.length > 0 ? (
+            form.photos.map((photo, index) => (
+              <div key={index} className="relative">
+                <img src={photo.url} alt={photo.prompt} className="rounded-lg shadow-md w-full object-cover mb-4" />
+              </div>
+            ))
+          ) : (
+            <img src={preview} alt="preview" className="w-full h-64 object-contain opacity-40" />
+          )}
+        </div>
+
+        <div className="flex justify-center mt-6">
+          <button
+            type="submit"
+            className="bg-red-500 text-white font-bold py-2 px-6 rounded hover:bg-red-600 transform transition-transform duration-500 ease-in-out hover:scale-110"
+          >
+            {loading ? 'Sharing...' : 'Share with Community'}
+          </button>
+        </div>
       </form>
 
-      <footer className="mt-10 p-4 bg-gray-800 text-center text-white">
-        <p>&copy; 2024 IMAGE-GEN. All rights reserved.</p>
-      </footer>
+      <div className="mt-8 text-center">
+        <button
+          onClick={handleShowRecentCreations}
+          className="bg-purple-500 text-white font-bold py-2 px-4 rounded hover:bg-purple-600 transform transition-transform duration-500 ease-in-out hover:scale-110"
+        >
+          {showRecentCreations ? 'Hide Recent Creations' : 'Show Recent Creations'}
+        </button>
+      </div>
+
+      {showRecentCreations && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
+          {recentCreations.map((photo, index) => (
+            <div key={index} className="relative group">
+              <img src={photo.url} alt={photo.prompt} className="rounded-lg shadow-md w-full object-cover mb-4" />
+              <div className="absolute top-2 right-2 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <button onClick={() => handleSavePhoto(photo.url)} className="text-white">
+                  <FaSave size={20} />
+                </button>
+                <button onClick={() => handleDownloadPhoto(photo.url)} className="text-white">
+                  <FaDownload size={20} />
+                </button>
+                <button onClick={() => handleDeletePhoto(photo.url)} className="text-white">
+                  <FaTrashAlt size={20} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 };

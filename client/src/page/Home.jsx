@@ -1,64 +1,45 @@
-import React, { useEffect, useState } from 'react';
-import styled from 'styled-components';
+import { useEffect, useState } from 'react';
 import { Card, FormField, Loader } from '../components';
-
-// Styled-components
-const MainContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-`;
-
-const ContentArea = styled.section`
-  width: 100%;
-  max-width: 1200px;
-  padding: 6rem 2rem;
-  background: linear-gradient(to right, #000000, #3b0a45, #5b2a78, #7f8c8d, #b59d2b, #004d40);
-  flex: 1;
-  margin: 0 auto;
-`;
-
-const Header = styled.div`
-  text-align: center;
-  margin-bottom: 1.5rem;
-`;
+import styled from 'styled-components';
 
 const GetStartedButton = styled.button`
   position: absolute;
   top: 2rem;
   right: 14.5rem;
-  padding: 1rem;
-  background-color: #0077b6;
+  padding: 1rem 2rem;
+  background-image: linear-gradient(to right, #00c6ff, #0072ff);
   color: white;
   font-size: 1.25rem;
   font-weight: bold;
   border: none;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  border-radius: 2rem;
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
   cursor: pointer;
-  transition: background-color 0.3s, transform 0.3s;
+  transition: background-image 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
 
   &:hover {
-    background-color: #005f73;
-    transform: scale(1.05);
+    background-image: linear-gradient(to right, #0072ff, #00c6ff);
+    transform: scale(1.1);
+    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.2);
   }
 `;
 
 const FAQContainer = styled.div`
-  max-width: 600px;
-  margin: 0 auto;
+  max-width: 700px;
+  margin: 2rem auto;
   padding: 2rem;
   background: white;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 1rem;
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
   position: relative;
+  z-index: 10;
 `;
 
 const CloseButton = styled.button`
   position: absolute;
   top: 1rem;
   right: 1rem;
-  background: red;
+  background: #ff4d4f;
   color: white;
   border: none;
   border-radius: 50%;
@@ -67,12 +48,12 @@ const CloseButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   cursor: pointer;
-  transition: background 0.3s;
+  transition: background 0.3s ease;
 
   &:hover {
-    background: #e65c50;
+    background: #ff7875;
   }
 `;
 
@@ -81,23 +62,24 @@ const FAQButton = styled.button`
   text-align: left;
   font-size: 1.125rem;
   font-weight: bold;
-  background: white;
-  color: #0077b6;
-  border-radius: 0.5rem;
+  background: #f0f9ff;
+  color: #0072ff;
+  border-radius: 0.75rem;
   padding: 1rem;
-  margin-bottom: 0.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 0.75rem;
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.05);
   cursor: pointer;
-  transition: background 0.3s;
+  transition: background 0.3s ease, transform 0.3s ease;
 
   &:hover {
     background: #e0f7fa;
+    transform: translateY(-3px);
   }
 `;
 
 const Answer = styled.p`
-  margin-top: 0.5rem;
-  color: black;
+  margin-top: 0.75rem;
+  color: #333;
   font-size: 1rem;
 `;
 
@@ -106,7 +88,9 @@ const RenderCards = ({ data, title }) => {
     return data.map((post) => <Card key={post._id} {...post} />);
   }
 
-  return <h2 className="mt-5 font-bold text-[#ff6f61] text-xl uppercase">{title}</h2>;
+  return (
+    <h2 className="mt-5 font-bold text-[#0072ff] text-xl uppercase">{title}</h2>
+  );
 };
 
 const Home = () => {
@@ -120,36 +104,42 @@ const Home = () => {
 
   const fetchPosts = async () => {
     setLoading(true);
-
     try {
-      const response = await fetch('/api/posts', {
-        method: 'GET',
+      const response = await fetch('http://localhost:3000/get', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
-
+  
       if (response.ok) {
         const result = await response.json();
-        setAllPosts(result.data.reverse());
+        setAllPosts(result.data.reverse()); // Assuming 'result.data' is an array
+      } else {
+        throw new Error('Failed to fetch posts');
       }
     } catch (err) {
-      alert(err);
+      console.error('Error fetching posts:', err);
+      alert('An error occurred while fetching posts.');
     } finally {
       setLoading(false);
     }
   };
-
+  
   useEffect(() => {
     fetchPosts();
   }, []);
 
   const handleSearchChange = (e) => {
     clearTimeout(searchTimeout);
-    setSearchText(e.target.value);
+    const query = e.target.value;
+    setSearchText(query);
 
     setSearchTimeout(
       setTimeout(() => {
-        const searchResult = allPosts.filter((item) =>
-          item.name.toLowerCase().includes(searchText.toLowerCase()) ||
-          item.prompt.toLowerCase().includes(searchText.toLowerCase())
+        const searchResult = allPosts?.filter((item) =>
+          item.name.toLowerCase().includes(query.toLowerCase()) ||
+          item.prompt.toLowerCase().includes(query.toLowerCase())
         );
         setSearchedResults(searchResult);
       }, 500)
@@ -171,99 +161,102 @@ const Home = () => {
   };
 
   return (
-    <MainContainer>
-      <ContentArea>
-        <GetStartedButton onClick={() => setShowAnswers(!showAnswers)}>
-          Don't know where to start? Get Started here
-        </GetStartedButton>
+    <section className="max-w-7xl mx-auto">
+      <GetStartedButton onClick={() => setShowAnswers(!showAnswers)}>
+        Don't know where to start? Get Started here
+      </GetStartedButton>
 
-        <Header>
-          <h1 className="font-extrabold text-gold text-4xl md:text-5xl leading-tight mb-4">The Community Showcase</h1>
-          <p className="text-gray-200 text-lg md:text-xl max-w-[600px] mx-auto">Browse through a collection of imaginative and visually stunning images generated by DALL-E AI.</p>
-        </Header>
+      <div>
+        <h1 className="font-bold text-transparent text-[36px] bg-clip-text bg-gradient-to-r from-green-300 via-teal-400 to-blue-500">
+          Explore the Creative Universe
+        </h1>
+        <p className="mt-4 text-[#004d4d] text-[16px] max-w-[600px]">
+          Dive into a world of awe-inspiring, AI-generated art, curated by the community for your inspiration and delight. Experience the fusion of technology and creativity with DALL-E AI.
+        </p>
+      </div>
 
-        <div className="mt-10">
-          <FormField
-            labelName="Search posts"
-            type="text"
-            name="text"
-            placeholder="Search something..."
-            value={searchText}
-            handleChange={handleSearchChange}
-            className="bg-white border border-gray-300 rounded-lg p-2 shadow-md focus:ring-2 focus:ring-teal-400 transition-all duration-300"
-          />
-        </div>
+      <div className="mt-16">
+        <FormField
+          labelName="Search posts"
+          type="text"
+          name="text"
+          placeholder="Search something..."
+          value={searchText}
+          handleChange={handleSearchChange}
+        />
+      </div>
 
-        <div className="mt-12">
-          {loading ? (
-            <div className="flex justify-center items-center">
-              <Loader />
-            </div>
-          ) : (
-            <>
-              {searchText && (
-                <h2 className="font-medium text-gray-200 text-xl mb-3">
-                  Showing Results for <span className="text-white">{searchText}</span>:
-                </h2>
+      <div className="mt-10">
+        {loading ? (
+          <div className="flex justify-center items-center">
+            <Loader />
+          </div>
+        ) : (
+          <>
+            {searchText && (
+              <h2 className="font-medium text-[#666e75] text-xl mb-3">
+                Showing Results for <span className="text-[#222328]">{searchText}</span>:
+              </h2>
+            )}
+            
+            <div className="grid lg:grid-cols-4 sm:grid-cols-3 xs:grid-cols-2 grid-cols-1 gap-4">
+              {searchText ? (
+                <RenderCards
+                  data={searchedResults}
+                  title="No Search Results Found"
+                />
+              ) : (
+                <RenderCards
+                  data={allPosts}
+                  title="No Posts Yet"
+                />
               )}
-              <div className="grid lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2 xs:grid-cols-1 gap-4">
-                {searchText ? (
-                  <RenderCards
-                    data={searchedResults}
-                    title="No Search Results Found"
-                  />
-                ) : (
-                  <RenderCards
-                    data={allPosts}
-                    title="No Posts Yet"
-                  />
-                )}
-              </div>
-            </>
-          )}
-        </div>
-
-        {showAnswers && (
-          <FAQContainer>
-            <CloseButton onClick={handleCloseFAQ}>×</CloseButton>
-            <h2 className="text-2xl font-bold mb-4 text-center">Frequently Asked Questions</h2>
-            <div className="space-y-4">
-              <div>
-                <FAQButton onClick={() => toggleAnswers('question1')}>
-                  How do I generate an image?
-                </FAQButton>
-                {showAnswers && activeQuestion === 'question1' && (
-                  <Answer>
-                    To generate an image, enter a prompt in the search field or click the "Surprise Me" button to get a random prompt. After setting the prompt, click the "Generate Image" button to see your image.
-                  </Answer>
-                )}
-              </div>
-              <div>
-                <FAQButton onClick={() => toggleAnswers('question2')}>
-                  How do I search for posts?
-                </FAQButton>
-                {showAnswers && activeQuestion === 'question2' && (
-                  <Answer>
-                    Use the search field at the top of the page to find posts by name or prompt. Type in your keywords and the results will be displayed below.
-                  </Answer>
-                )}
-              </div>
-              <div>
-                <FAQButton onClick={() => toggleAnswers('question3')}>
-                  What should I do if there are no results?
-                </FAQButton>
-                {showAnswers && activeQuestion === 'question3' && (
-                  <Answer>
-                    If no results are found, try modifying your search terms or check back later as new posts may be added.
-                  </Answer>
-                )}
-              </div>
             </div>
-            <p className="mt-6 text-center text-gray-100">© 2024 Your Company. All rights reserved.</p>
-          </FAQContainer>
+            {showAnswers && (
+              <FAQContainer>
+                <CloseButton onClick={handleCloseFAQ}>×</CloseButton>
+                <h2 className="text-2xl font-bold mb-4 text-center">Frequently Asked Questions</h2>
+                <div className="space-y-4">
+                  <div>
+                    <FAQButton onClick={() => toggleAnswers('question1')}>
+                      How do I generate an image?
+                    </FAQButton>
+                    {showAnswers && activeQuestion === 'question1' && (
+                      <Answer>
+                        To generate an image, enter a prompt in the search field or click the "Surprise Me" button to get a random prompt. After setting the prompt, click the "Generate Image" button to see your image.
+                      </Answer>
+                    )}
+                  </div>
+                  <div>
+                    <FAQButton onClick={() => toggleAnswers('question2')}>
+                      How do I search for posts?
+                    </FAQButton>
+                    {showAnswers && activeQuestion === 'question2' && (
+                      <Answer>
+                        Use the search field at the top of the page to find posts by name or prompt. Type in your keywords and the results will be displayed below.
+                      </Answer>
+                    )}
+                  </div>
+                  <div>
+                    <FAQButton onClick={() => toggleAnswers('question3')}>
+                      What should I do if there are no results?
+                    </FAQButton>
+                    {showAnswers && activeQuestion === 'question3' && (
+                      <Answer>
+                        If no results are found, try modifying your search terms or check back later as new posts may be added.
+                      </Answer>
+                    )}
+                  </div>
+                </div>
+                <p className="mt-6 text-center text-gray-100">
+                  © 2024 Your Company. All rights reserved.
+                </p>
+              </FAQContainer>
+            )}
+          </>
         )}
-      </ContentArea>
-    </MainContainer>
+      </div>
+    </section>
   );
 };
 

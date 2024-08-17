@@ -63,7 +63,7 @@ const CreatePost = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${"sk-None-gLGZPwmWWEiBoyxIFJX9T3BlbkFJmFlfSysRPgIYucRw6XaV"}`,
+            'Authorization': `Bearer ${}`,
           },
           body: JSON.stringify({
             prompt: form.prompt,

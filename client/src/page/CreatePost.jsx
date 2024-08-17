@@ -22,6 +22,7 @@ const CreatePost = () => {
 
   const { transcript, isListening, startListening, stopListening } = useSpeechRecognition();
 
+  // Update the prompt field based on the speech transcript
   useEffect(() => {
     if (transcript) {
       setTempPrompt(transcript);
@@ -29,8 +30,8 @@ const CreatePost = () => {
     }
   }, [transcript]);
 
+  // Fetch images from MongoDB when the component mounts
   useEffect(() => {
-    // Fetch images from the backend
     const fetchImages = async () => {
       try {
         const response = await fetch('http://localhost:3000/api/images');
@@ -53,6 +54,7 @@ const CreatePost = () => {
     setIsPromptEditing(false);
   };
 
+  // Generate an image based on the prompt and save it to MongoDB
   const generateImage = async () => {
     if (form.prompt) {
       try {
@@ -61,7 +63,7 @@ const CreatePost = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${''}`,
+            'Authorization': `Bearer ${"sk-None-gLGZPwmWWEiBoyxIFJX9T3BlbkFJmFlfSysRPgIYucRw6XaV"}`,
           },
           body: JSON.stringify({
             prompt: form.prompt,
@@ -79,9 +81,9 @@ const CreatePost = () => {
           setRecentCreations((prev) => [...prev, ...newPhotos]);
 
           // Save images to MongoDB
-          newPhotos.forEach(async (photo) => {
+          await Promise.all(newPhotos.map(async (photo) => {
             try {
-              await fetch('http://localhost:3000/image', {
+              await fetch('http://localhost:3000/api/images', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -91,7 +93,7 @@ const CreatePost = () => {
             } catch (err) {
               console.error('Error saving image:', err);
             }
-          });
+          }));
         } else {
           alert('Invalid photo data received from the API.');
         }
@@ -106,23 +108,22 @@ const CreatePost = () => {
     }
   };
 
+  // Submit and share the images with the community
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (form.prompt && form.photos.length) {
       setLoading(true);
       try {
-        await Promise.all(
-          form.photos.map(async (photo) => {
-            await fetch('http://localhost:3000/api/image', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(photo),
-            });
-          })
-        );
+        await Promise.all(form.photos.map(async (photo) => {
+          await fetch('http://localhost:3000/api/images', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(photo),
+          });
+        }));
 
         alert('Success');
         navigate('/');
@@ -158,6 +159,7 @@ const CreatePost = () => {
     setShowRecentCreations(!showRecentCreations);
   };
 
+  // Save photo locally
   const handleSavePhoto = (url) => {
     const a = document.createElement('a');
     a.href = url;
@@ -166,6 +168,7 @@ const CreatePost = () => {
     alert('Photo saved to your local machine!');
   };
 
+  // Download photo
   const handleDownloadPhoto = (url) => {
     const a = document.createElement('a');
     a.href = url;
@@ -173,11 +176,11 @@ const CreatePost = () => {
     a.click();
   };
 
+  // Delete photo from recent creations and MongoDB
   const handleDeletePhoto = async (url) => {
     const updatedPhotos = recentCreations.filter((photo) => photo.url !== url);
     setRecentCreations(updatedPhotos);
 
-    // Update MongoDB
     try {
       await fetch('http://localhost:3000/api/images', {
         method: 'DELETE',
@@ -190,11 +193,6 @@ const CreatePost = () => {
     } catch (err) {
       console.error('Error deleting photo:', err);
     }
-  };
-
-  const handleShareWithCommunity = () => {
-    localStorage.setItem('savedPhotos', JSON.stringify(recentCreations));
-    navigate('/'); // Redirect to Home
   };
 
   return (
@@ -231,11 +229,12 @@ const CreatePost = () => {
               handleChange={(e) => setTempPrompt(e.target.value)}
               onFocus={handlePromptClick}
               onBlur={handlePromptBlur}
+              className="w-full p-2 border rounded"
             />
             <button
               type="button"
               onClick={handleSurpriseMe}
-              className="ml-3 bg-yellow-500 text-white font-bold py-2 px-4 rounded hover:bg-yellow-600 transform transition-transform duration-500 ease-in-out hover:scale-110"
+              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-pink-500 hover:to-purple-500 text-white font-bold py-2 px-4 rounded shadow-lg transition-all duration-300 transform hover:scale-105 mr-4"
             >
               Surprise Me!
             </button>
@@ -246,7 +245,7 @@ const CreatePost = () => {
           <button
             type="button"
             onClick={generateImage}
-            className="bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-600 transform transition-transform duration-500 ease-in-out hover:scale-110"
+            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-pink-500 hover:to-purple-500 text-white font-bold py-2 px-4 rounded shadow-lg transition-all duration-300 transform hover:scale-105 mr-4"
             disabled={generatingImg}
           >
             {generatingImg ? 'Generating...' : 'Generate Image'}
@@ -255,11 +254,9 @@ const CreatePost = () => {
           <button
             type="button"
             onClick={handleVoiceTyping}
-            className={`bg-green-500 text-white font-bold py-2 px-4 rounded hover:bg-green-600 transform transition-transform duration-500 ease-in-out hover:scale-110 ${
-              isListening ? 'animate-pulse' : ''
-            }`}
+            className={`bg-gradient-to-r ${isListening ? 'from-red-500 to-red-700' : 'from-green-400 to-blue-500'} hover:from-blue-500 hover:to-green-400 text-white font-bold py-2 px-4 rounded shadow-lg transition-all duration-300 transform hover:scale-105`}
           >
-            {isListening ? 'Stop Voice Typing' : 'Voice Typing'}
+            {isListening ? 'Listening...' : 'Voice Typing'}
           </button>
         </div>
 
@@ -292,7 +289,7 @@ const CreatePost = () => {
       <div className="mt-8 text-center">
         <button
           onClick={handleShowRecentCreations}
-          className="bg-purple-500 text-white font-bold py-2 px-4 rounded hover:bg-purple-600 transform transition-transform duration-500 ease-in-out hover:scale-110"
+          className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-orange-500 hover:to-yellow-400 text-white font-bold py-2 px-4 rounded shadow-lg transition-all duration-300 transform hover:scale-105"
         >
           {showRecentCreations ? 'Hide Recent Creations' : 'Show Recent Creations'}
         </button>

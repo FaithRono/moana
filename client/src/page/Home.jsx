@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import {  useState } from 'react';
 import { Card, FormField, Loader } from '../components';
 import styled from 'styled-components';
 
@@ -82,7 +82,6 @@ const Answer = styled.p`
   color: #333;
   font-size: 1rem;
 `;
-
 const RenderCards = ({ data, title }) => {
   if (data?.length > 0) {
     return data.map((post) => <Card key={post._id} {...post} />);
@@ -105,8 +104,8 @@ const Home = () => {
   const fetchPosts = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/get', {
-        method: 'POST',
+      const response = await fetch('http://localhost:3000/api/posts', {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -114,7 +113,13 @@ const Home = () => {
   
       if (response.ok) {
         const result = await response.json();
-        setAllPosts(result.data.reverse()); // Assuming 'result.data' is an array
+  
+        // Check if result is an array
+        if (Array.isArray(result)) {
+          setAllPosts(result.reverse()); // Reverse the array if it is valid
+        } else {
+          throw new Error('Expected an array of posts but received: ' + JSON.stringify(result));
+        }
       } else {
         throw new Error('Failed to fetch posts');
       }
@@ -126,10 +131,6 @@ const Home = () => {
     }
   };
   
-  useEffect(() => {
-    fetchPosts();
-  }, []);
-
   const handleSearchChange = (e) => {
     clearTimeout(searchTimeout);
     const query = e.target.value;

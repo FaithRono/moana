@@ -40,5 +40,25 @@ router.get('/:id', (req, res) => {
       res.status(404).send('Image not found');
   }
 });
+router.post('/save-image', async (req, res) => {
+  try {
+    const { url, prompt, description } = req.body;
+
+    // Create new Image document
+    const newImage = new Image({
+      url,
+      prompt,
+      description,
+    });
+
+    // Save image metadata to MongoDB
+    await newImage.save();
+
+    res.status(201).json({ success: true, data: newImage });
+  } catch (error) {
+    console.error('Error saving image:', error);
+    res.status(500).json({ success: false, error: 'Failed to save image.' });
+  }
+});
 
 module.exports = router;

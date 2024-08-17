@@ -1,12 +1,12 @@
-import React from 'react';
-
+/*import React from 'react';*/
+import PropTypes from 'prop-types';
 import { download } from '../assets';
 import { downloadImage } from '../utils';
 
 const Card = ({ _id, name, prompt, photo }) => (
   <div className="rounded-xl group relative shadow-card hover:shadow-cardhover card">
     <img
-      className="w-full h-auto object-cover rounded-xl"
+      className="w-full h-64 object-cover rounded-xl"
       src={photo}
       alt={prompt}
     />
@@ -25,5 +25,12 @@ const Card = ({ _id, name, prompt, photo }) => (
     </div>
   </div>
 );
+
+Card.propTypes = {
+  _id: PropTypes.string.isRequired,
+  name: PropTypes.string.isRequired,
+  prompt: PropTypes.string.isRequired,
+  photo: PropTypes.string.isRequired,
+};
 
 export default Card;

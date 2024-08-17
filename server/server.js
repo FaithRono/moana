@@ -5,7 +5,6 @@ const cors = require('cors');
 const Post = require('./models/posts');
 const Image = require('./models/image');
 
-
 const app = express();
 app.use(cors());
 app.use(express.json()); // Use only express.json()
@@ -16,7 +15,6 @@ const uri = process.env.MONGODB_URI;
 mongoose.connect(uri)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
-
 
 // Route to save image
 app.post('/api/images', async (req, res) => {
@@ -29,7 +27,6 @@ app.post('/api/images', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-// Example usage in a route handler
 
 // Route to get all images
 app.get('/api/images', async (req, res) => {
@@ -41,7 +38,19 @@ app.get('/api/images', async (req, res) => {
   }
 });
 
-app.get('/get', async (req, res) => {
+// Route to delete an image
+app.delete('/api/images', async (req, res) => {
+  try {
+    const { url } = req.body;
+    await Image.deleteOne({ url });
+    res.status(200).json({ message: 'Image deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Route to get posts
+app.get('/api/posts', async (req, res) => {
   try {
     const posts = await Post.find(); // Adjust according to your schema
     res.status(200).json({ data: posts });
@@ -49,6 +58,8 @@ app.get('/get', async (req, res) => {
     res.status(500).json({ success: false, message: 'Error fetching posts' });
   }
 });
+
+// Route to create a post
 app.post('/api/posts', async (req, res) => {
   try {
     const { name, prompt, url } = req.body;
@@ -57,20 +68,6 @@ app.post('/api/posts', async (req, res) => {
     res.status(201).json(post);
   } catch (err) {
     res.status(500).json({ error: err.message });
-  }
-});
-
-
-// Route to get posts (ensure Post model exists)
-app.post('/get', async (req, res) => {
-  console.log('Received request to /get endpoint'); // Log request reception
-  try {
-    const posts = await Post.find({});
-    console.log('Posts fetched successfully:', posts); // Log fetched posts
-    res.status(200).json({ data: posts });
-  } catch (error) {
-    console.error('Error fetching posts:', error.message); // Log detailed error
-    res.status(500).json({ error: 'An error occurred while fetching data.' });
   }
 });
 

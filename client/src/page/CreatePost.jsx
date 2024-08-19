@@ -5,7 +5,10 @@ import { getRandomPrompt } from '../utils';
 import { FormField, Loader } from '../components';
 import useSpeechRecognition from '../hooks/useSpeechRecognition';
 import { FaTrashAlt, FaDownload, FaSave } from 'react-icons/fa';
+// import { config } from 'dotenv';
+// config();
 
+// const uri = process.env.MONGODB_URI;
 const CreatePost = () => {
   const navigate = useNavigate();
   const [form, setForm] = useState({
@@ -64,7 +67,7 @@ const CreatePost = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${}`,
+            'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
           },
           body: JSON.stringify({
             prompt: form.prompt,
@@ -77,6 +80,7 @@ const CreatePost = () => {
           const newPhotos = data.data.map((item) => ({
             url: item.url,
             prompt: form.prompt,
+            name: form.name,
           }));
           setForm({ ...form, photos: newPhotos });
           setRecentCreations((prev) => [...prev, ...newPhotos]);
@@ -89,7 +93,13 @@ const CreatePost = () => {
                 headers: {
                   'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(photo),
+                body: JSON.stringify(
+                    {
+                      prompt: form.prompt,
+                      name: form.name,
+                      url: photo.url,
+                    }
+                ),
               });
             } catch (err) {
               console.error('Error saving image:', err);

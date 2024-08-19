@@ -21,6 +21,8 @@ app.post('/api/images', async (req, res) => {
   try {
     const { url, prompt } = req.body;
     const image = new Image({ url, prompt });
+    // const post = new Post({ url, prompt });
+    // await post.save();
     await image.save();
     res.status(201).json(image);
   } catch (err) {

@@ -57,6 +57,7 @@ const CreatePost = () => {
   // Generate an image based on the prompt and save it to MongoDB
   const generateImage = async () => {
     if (form.prompt) {
+      // console.log(form);
       try {
         setGeneratingImg(true);
         const response = await fetch('https://api.openai.com/v1/images/generations', {

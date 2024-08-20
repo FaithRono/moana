@@ -54,7 +54,7 @@ app.delete('/api/images', async (req, res) => {
 // Route to get posts
 app.get('/api/posts', async (req, res) => {
     try {
-        const posts = await Post.find(); // Adjust according to your schema
+        const posts = await Image.find(); // Adjust according to your schema
         res.status(200).json({data: posts});
     } catch (error) {
         res.status(500).json({success: false, message: 'Error fetching posts'});

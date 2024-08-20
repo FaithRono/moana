@@ -1,4 +1,4 @@
-import {  useState } from 'react';
+import {useEffect, useState} from 'react';
 import { Card, FormField, Loader } from '../components';
 import styled from 'styled-components';
 
@@ -110,13 +110,12 @@ const Home = () => {
           'Content-Type': 'application/json',
         },
       });
-  
+
       if (response.ok) {
         const result = await response.json();
-  
         // Check if result is an array
-        if (Array.isArray(result)) {
-          setAllPosts(result.reverse()); // Reverse the array if it is valid
+        if (Array.isArray(result['data'])) {
+          setAllPosts(result['data'].reverse()); // Reverse the array if it is valid
         } else {
           throw new Error('Expected an array of posts but received: ' + JSON.stringify(result));
         }
@@ -129,8 +128,12 @@ const Home = () => {
     } finally {
       setLoading(false);
     }
+
   };
-  
+    useEffect(() => {
+    fetchPosts().then(r => console.log(r) );
+  }, []);
+
   const handleSearchChange = (e) => {
     clearTimeout(searchTimeout);
     const query = e.target.value;
